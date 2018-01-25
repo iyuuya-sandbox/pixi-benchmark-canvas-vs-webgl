@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<meta charset='UTF-8'>
+<title>Benchmark</title>
+<link rel="stylesheet" href="style.css">
+
+<style>
+    .cloak {
+        display: none;
+    }
+</style>
+
+<style>
+    /* Animated arrow */
+
+    #arrow {
+        transform: rotate(30deg);
+    }
+
+    #arrow polyline {
+        animation-name: svg-arrow;
+        animation-duration: 3s;
+        animation-delay: 1s;
+        animation-iteration-count: infinite;
+        transform: translate(44px, 32px) rotate(90deg);
+        fill: #fff;
+    }
+
+    #arrow path {
+        animation-name: svg-path;
+        animation-duration: 3s;
+        animation-delay: 1s;
+        animation-iteration-count: infinite;
+        stroke-dasharray: 4, 4;
+        stroke-dashoffset: -2;
+        fill: none;
+        stroke: #fff;
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    @keyframes svg-arrow {
+        0% {
+            fill: #fff;
+            transform: translate(44px, 0px) rotate(90deg);
+        }
+
+        33% {
+            transform: translate(44px, 32px) rotate(90deg);
+            fill: #333;
+        }
+
+        66% {
+            fill: #333;
+        }
+
+        100% {
+            fill: #fff;
+        }
+    }
+
+    @keyframes svg-path {
+        0% {
+            stroke: #fff;
+            stroke-dashoffset: -2;
+            transform: translateY(-32px);
+        }
+
+        33% {
+            transform: translateY(0px);
+            stroke-dashoffset: -34;
+            stroke: #333;
+        }
+
+        66% {
+            transform: translateY(0px);
+            stroke: #333;
+            stroke-dashoffset: -34;
+        }
+
+        100% {
+            stroke: #fff;
+            transform: translateY(32px);
+            stroke-dashoffset: -66;
+        }
+    }
+
+    /* Why? Why? Because MS Edge. Cry, cry. :-( */
+    _:-ms-lang(x), #arrow {
+        display: none;
+    }
+</style>
+
+<body>
+
+<script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/pixi.js/3.0.8/pixi.min.js'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r73/three.min.js'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/EaselJS/0.8.0/easeljs.min.js'></script>
+
+<script>
+    // Backup requestAnimationFrame & restore after first call to disable two.js auto loop start
+    // https://github.com/jonobr1/two.js/issues/135
+    window._requestAnimationFrame = window.requestAnimationFrame;
+
+    window.requestAnimationFrame = function () {
+        window.requestAnimationFrame = window._requestAnimationFrame;
+    };
+</script>
+
+<script src='https://cdnjs.cloudflare.com/ajax/libs/two.js/0.5.0/two.min.js'></script>
+<script src='http://bl.ocks.org/darosh/raw/e5e4a3e2d9bece0f86e2/art-canvas.min.js'></script>
+<script src='http://bl.ocks.org/darosh/raw/e5e4a3e2d9bece0f86e2/art-svg.min.js'></script>
+
+<script src='three.renderers.min.js'></script>
+<script src='d3-path.min.js'></script>
+<script src='https://bl.ocks.org/darosh/raw/4360c8ac1dcaee373113/stackgl.min.js'></script>
+
+<script src='bench.js'></script>
+<script src='bench.utils.js'></script>
+<script src='bench-all.js'></script>
+
+<div>
+    <div class="cloak block pull-left">
+        <div id="container" class="container" style="position: relative">
+            <div id="message" class="block" style="padding: 0 8px">
+                <table class="table-inline">
+                    <thead>
+                    <tr>
+                        <th rowspan="2">Framework</th>
+                        <th colspan="5" class="down">API Compatibility</th>
+                    </tr>
+                    <tr>
+                        <th class="up"><a href="https://en.wikipedia.org/wiki/Scalable_Vector_Graphics" target="_blank">svg</a>
+                        </th>
+                        <th class="up"><a href="https://en.wikipedia.org/wiki/Canvas_element" target="_blank">canvas</a>
+                        </th>
+                        <th class="up"><a href="https://en.wikipedia.org/wiki/WebGL" target="_blank">webgl</a></th>
+                        <th class="up"><a href="https://github.com/d3/d3-path" target="_blank">path</a></th>
+                        <th class="up"><a
+                                href="https://github.com/mrdoob/three.js/blob/8ed08e983fcc78a50b8ac4ee917a23754cc6fd55/examples/js/renderers/CSS3DRenderer.js"
+                                target="_blank">css</a></th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <svg id="arrow" width="64" height="64" style="position: absolute; left: -10px; bottom: -6px;">
+                <defs>
+                    <clipPath id="clip-arrow">
+                        <rect x="0" y="0" width="64" height="32"></rect>
+                    </clipPath>
+                </defs>
+                <g clip-path="url(#clip-arrow)">
+                    <path d="M 32 0 L 32 32"></path>
+                </g>
+                <polyline points="0,0 24,12 0,24"></polyline>
+            </svg>
+        </div>
+
+        <div class="cloak controls block-label bottom pull-left">
+            <span id="run" class="btn click">run</span>
+            <span id="stop" class="btn click">stop</span>
+            <span id="info" class="btn click">info</span>
+        </div>
+        <div id="name" class="block-label bottom test-name pull-right text-right"></div>
+
+        <div class="clear"></div>
+    </div>
+
+    <div class="cloak block pull-left aside">
+        <div class="controls block-label top">
+            <div id="filter-object">object: <span class="list"></span></div>
+            <div id="filter-count">count: <span class="list"></span></div>
+        </div>
+        <svg id="pack" width="413" height="400" class="container"></svg>
+    </div>
+</div>
+
+<div class="cloak block pull-right">
+    <table id="result">
+        <thead>
+        <tr>
+            <th rowspan="2">Framework</th>
+            <th rowspan="2">Renderer</th>
+            <th rowspan="2">Object</th>
+            <th id="version" rowspan="2">Version</th>
+            <th class="group">Count / FPS</th>
+        </tr>
+        <tr class="objects"></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <div class="controls block-label  bottom pull-left">
+        <span id="reset" class="btn click">reset</span>
+        <a id="share" class="btn click" href="./" target="_blank">share</a>
+    </div>
+
+    <div id="link" class="controls block-label bottom pull-right"><a href="#" target="_parent">open in a new window</a>
+    </div>
+
+    <div id="note" class="block-label bottom pull-right">click FPS value to run single test</div>
+
+    <div class="clear"></div>
+</div>
+
+<div class="cloak pull-left">
+    <svg id="chart"></svg>
+</div>
+
+<script>
+    Bench({
+        time: 1300,
+        pause: 500,
+        width: 400,
+        height: 400,
+        tests: [60, 240, 720, 1440, 1920]
+    });
+
+    d3.select('#message tbody').selectAll('tr').data([
+                [{
+                    title: 'pixi',
+                    link: 'http://www.pixijs.com/',
+                    size: '80KB',
+                    version: PIXI.VERSION
+                }, null, 5, 5, null, null],
+            ])
+            .enter().append('tr')
+            .selectAll('td').data(function (d) {
+                return d;
+            })
+            .enter().append('td')
+            .style('text-align', function (d, i) {
+                return i ? 'center' : null;
+            })
+            .html(function (d, i) {
+                var c;
+
+                return (d && d.title) ? ('<a href="' + d.link + '" target="_blank"><b>' + d.title + '</b></a>' +
+                '<small class="pull-right">' + d.size + '</small>' +
+                '<br><small>' + d.version + '</small>') :
+                        (i > 0 && d > 0) ? '<span class="api" style="background-color: ' +
+                        (c = d3.rgb(Bench.color(1 - d / 8)), 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',0.5)') +
+                        '"><b>' + d + '</b></span>' :
+                        '<small>' + (d || '&mdash;') + '</small>';
+            });
+
+    try {
+        d3.select(self.frameElement).style('height', document.body.getBoundingClientRect().height + 'px');
+    } catch (ign) {
+    }
+</script>
+</body>
